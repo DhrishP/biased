@@ -1,0 +1,183 @@
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Share,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Stack, router } from "expo-router";
+import { ArrowLeft, Share2 } from "lucide-react-native";
+import { colors } from "@/constants/colors";
+import { useAnalysisStore } from "@/store/analysisStore";
+import { PieChart } from "@/components/PieChart";
+import { BiasCard } from "@/components/BiasCard";
+import { biasTypes } from "@/constants/biases";
+import { Button } from "@/components/Button";
+import { BiasResult } from "@/types/analysis";
+
+export default function ResultsScreen() {
+  const { currentAnalysis } = useAnalysisStore();
+
+  // If no analysis is available, redirect to home
+  React.useEffect(() => {
+    if (!currentAnalysis) {
+      router.replace("/");
+    }
+  }, [currentAnalysis]);
+
+  if (!currentAnalysis) {
+    return null;
+  }
+
+  const handleShare = async () => {
+    try {
+      // Create a shareable text summary
+      const biasText = currentAnalysis.results
+        .map((bias: BiasResult) => {
+          const biasInfo = biasTypes.find((b) => b.id === bias.id);
+          return `${biasInfo?.name || bias.id}: ${bias.percentage}%`;
+        })
+        .join("\n");
+
+      const shareText = `Cognitive Bias Analysis Results: \n\n${currentAnalysis.summary}\n\nBreakdown: \n${biasText}`;
+
+      await Share.share({
+        message: shareText,
+        title: "My Cognitive Bias Analysis",
+      });
+    } catch (error) {
+      console.error("Error sharing results:", error);
+    }
+  };
+
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          title: "Analysis Results",
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.headerButton}
+            >
+              <ArrowLeft size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
+              <Share2 size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <SafeAreaView style={styles.container} edges={["bottom"]}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.summaryContainer}>
+            <Text style={styles.summaryTitle}>Summary</Text>
+            <Text style={styles.summaryText}>{currentAnalysis.summary}</Text>
+          </View>
+          <View style={styles.chartSection}>
+            <Text style={styles.sectionTitle}>Bias Breakdown</Text>
+            <PieChart data={currentAnalysis.results} />
+          </View>
+          <View style={styles.detailsSection}>
+            <Text style={styles.sectionTitle}>Detailed Analysis</Text>
+            {currentAnalysis.results.map((result: BiasResult) => {
+              const biasInfo = biasTypes.find((b) => b.id === result.id);
+              if (!biasInfo) return null;
+              return (
+                <BiasCard
+                  key={result.id}
+                  bias={biasInfo}
+                  percentage={result.percentage}
+                />
+              );
+            })}
+          </View>
+          <View style={styles.textSection}>
+            <Text style={styles.sectionTitle}>Analyzed Text</Text>
+            <View style={styles.textContainer}>
+              <Text style={styles.analyzedText}>{currentAnalysis.text}</Text>
+            </View>
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="New Analysis"
+              onPress={() => router.replace("/")}
+              style={styles.button}
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  headerButton: {
+    padding: 8,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  summaryContainer: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.text,
+    marginBottom: 8,
+  },
+  summaryText: {
+    fontSize: 16,
+    color: colors.text,
+    lineHeight: 22,
+  },
+  chartSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.text,
+    marginBottom: 16,
+  },
+  detailsSection: {
+    marginBottom: 20,
+  },
+  textSection: {
+    marginBottom: 24,
+  },
+  textContainer: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  analyzedText: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  buttonContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  button: {
+    width: 200,
+  },
+});
