@@ -1,74 +1,164 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { Brain } from "lucide-react-native";
+import { colors } from "@/constants/colors";
+import { Button } from "@/components/Button";
+import { useAnalysisStore } from "@/store/analysisStore";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function AnalyzeScreen() {
+  const [text, setText] = useState("");
+  const { analyze, isAnalyzing } = useAnalysisStore();
 
-export default function HomeScreen() {
+  const handleAnalyze = async () => {
+    if (!text.trim()) return;
+    try {
+      await analyze(text);
+      router.push("/results");
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      // Handle error
+    }
+  };
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardAvoid}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.header}>
+              <Brain size={40} color={colors.primary} />
+              <Text style={styles.title}>Cognitive Bias Detector</Text>
+              <Text style={styles.subtitle}>
+                Enter your thoughts, opinions, or arguments to analyze for
+                cognitive biases
+              </Text>
+            </View>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                multiline
+                placeholder="Start typing here..."
+                placeholderTextColor={colors.textLight}
+                value={text}
+                onChangeText={setText}
+                textAlignVertical="top"
+              />
+            </View>
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Analyze"
+                onPress={handleAnalyze}
+                loading={isAnalyzing}
+                disabled={!text.trim() || isAnalyzing}
+              />
+            </View>
+            <View style={styles.tipsContainer}>
+              <Text style={styles.tipsTitle}>Tips for better analysis:</Text>
+              <Text style={styles.tipText}>
+                • Write at least a paragraph for more accurate results
+              </Text>
+              <Text style={styles.tipText}>
+                • Express your genuine opinions and reasoning
+              </Text>
+              <Text style={styles.tipText}>
+                • Include your thought process and assumptions
+              </Text>
+              <Text style={styles.tipText}>
+                • Be specific rather than general
+              </Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
-  stepContainer: {
-    gap: 8,
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 20,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: colors.text,
+    marginTop: 12,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    fontSize: 14,
+    color: colors.textLight,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  inputContainer: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 20,
+  },
+  textInput: {
+    minHeight: 150,
+    padding: 16,
+    fontSize: 16,
+    color: colors.text,
+  },
+  buttonContainer: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  tipsContainer: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tipsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.text,
+    marginBottom: 8,
+  },
+  tipText: {
+    fontSize: 14,
+    color: colors.text,
+    marginBottom: 6,
+    lineHeight: 20,
   },
 });
