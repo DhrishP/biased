@@ -8,8 +8,8 @@ compatibility_flags = ["nodejs_compat"]
 # Configure your database
 [[d1_databases]]
 binding = "DB"
-database_name = "ai-asap-bot"
-database_id = ""
+database_name = "biased"
+database_id = "fb663240-580f-499e-8b49-ee43733756f1"
 
 
 
