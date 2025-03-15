@@ -6,7 +6,8 @@
   "dependencies": {
     "@ai-sdk/google": "^1.1.25",
     "ai": "^4.1.61",
-    "hono": "^3.11.7"
+    "hono": "^3.11.7",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20231218.0",

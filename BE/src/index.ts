@@ -1,18 +1,15 @@
 import { Hono } from "hono";
-import { streamText, generateText, generateObject } from "ai";
+import { generateText, generateObject } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
 
-// Define Cloudflare Worker environment bindings
 type Bindings = {
   DB: D1Database;
   GOOGLE_API_KEY: string;
 };
 
-// Initialize Hono app with bindings
 const app = new Hono<{ Bindings: Bindings }>();
 
-// Root endpoint
 app.get("/", (c) => {
   return c.text("Bias Analysis API");
 });
@@ -44,7 +41,6 @@ app.post("/preview", async (c) => {
   }
 });
 
-// Analyse endpoint - identifies cognitive biases in the scenario with percentages
 app.post("/analyse", async (c) => {
   try {
     const { text } = await c.req.json();
@@ -57,7 +53,6 @@ app.post("/analyse", async (c) => {
       apiKey: c.env.GOOGLE_API_KEY,
     });
 
-    // Step 1: Use generateObject to analyze biases with percentages
     const biasSchema = z.object({
       biases: z.array(
         z.object({
@@ -67,11 +62,6 @@ app.post("/analyse", async (c) => {
             .min(0)
             .max(100)
             .describe("Confidence percentage of bias presence (0-100)"),
-          description: z
-            .string()
-            .describe(
-              "Brief description of how this bias manifests in the scenario"
-            ),
         })
       ),
     });
@@ -87,8 +77,9 @@ app.post("/analyse", async (c) => {
       dunning-kruger effect, hindsight bias, etc. Only include biases that are actually present.`,
       prompt: text,
     });
-
-    // Step 2: Use generateText to create a summary analysis of the biases
+    if (!biasSchema.parse(biasAnalysisResult)) {
+      return c.json({ error: "No biases found" }, 400);
+    }
     const { text: summary } = await generateText({
       model: google("gemini-2.0-flash"),
       system: `You are an expert in cognitive biases and psychology.
@@ -131,7 +122,6 @@ app.post("/analyse", async (c) => {
   }
 });
 
-// History endpoint - retrieves all previous analyses
 app.get("/history", async (c) => {
   try {
     const db = c.env.DB;
@@ -143,7 +133,6 @@ app.get("/history", async (c) => {
       )
       .all();
 
-    // Parse the biases JSON string back to an array
     const formattedResults = results.map((result: any) => ({
       ...result,
       biases: JSON.parse(result.biases),
@@ -156,14 +145,12 @@ app.get("/history", async (c) => {
   }
 });
 
-// Define types for our data
 type BiasAnalysis = {
   id: string;
   scenario: string;
   biases: {
     name: string;
     percentage: number;
-    description: string;
   }[];
   summary: string;
   createdAt: string;
