@@ -2,13 +2,15 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AnalysisResult } from "@/types/analysis";
-import { analyzeText } from "@/utils/mockAnalysis";
+import { analyzeText as apiAnalyzeText, getAnalysisHistory } from "@/utils/api";
 
 interface AnalysisState {
   history: AnalysisResult[];
   currentAnalysis: AnalysisResult | null;
   isAnalyzing: boolean;
+  isLoadingHistory: boolean;
   analyze: (text: string) => Promise<AnalysisResult>;
+  fetchHistory: () => Promise<void>;
   clearHistory: () => void;
   removeAnalysis: (id: string) => void;
   setCurrentAnalysis: (analysis: AnalysisResult | null) => void;
@@ -20,10 +22,11 @@ export const useAnalysisStore = create<AnalysisState>()(
       history: [] as AnalysisResult[],
       currentAnalysis: null,
       isAnalyzing: false,
+      isLoadingHistory: false,
       analyze: async (text: string) => {
         set({ isAnalyzing: true });
         try {
-          const result = await analyzeText(text);
+          const result = await apiAnalyzeText(text);
           set((state) => ({
             history: [result, ...state.history],
             currentAnalysis: result,
@@ -33,6 +36,16 @@ export const useAnalysisStore = create<AnalysisState>()(
         } catch (error) {
           set({ isAnalyzing: false });
           throw error;
+        }
+      },
+      fetchHistory: async () => {
+        set({ isLoadingHistory: true });
+        try {
+          const historyData = await getAnalysisHistory();
+          set({ history: historyData, isLoadingHistory: false });
+        } catch (error) {
+          console.error("Failed to fetch history:", error);
+          set({ isLoadingHistory: false });
         }
       },
       clearHistory: () => {

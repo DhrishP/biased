@@ -13,16 +13,43 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Brain } from "lucide-react-native";
-import { colors } from "@/constants/colors";
+import { colors } from "@/constants/Colors";
 import { Button } from "@/components/Button";
 import { useAnalysisStore } from "@/store/analysisStore";
+import { PreviewModal } from "@/components/PreviewModal";
+import { getTextPreview } from "@/utils/api";
 
 export default function AnalyzeScreen() {
   const [text, setText] = useState("");
   const { analyze, isAnalyzing } = useAnalysisStore();
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [previewText, setPreviewText] = useState("");
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  const handleGetPreview = async () => {
+    if (!text.trim()) return;
+
+    setIsLoadingPreview(true);
+    setIsPreviewVisible(true);
+
+    try {
+      const preview = await getTextPreview(text);
+      if (!preview) {
+        throw new Error("No preview text received");
+      }
+      setPreviewText(preview);
+    } catch (error) {
+      console.error("Preview failed:", error);
+      setPreviewText("Failed to generate preview. Please try again.");
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
 
   const handleAnalyze = async () => {
     if (!text.trim()) return;
+    setIsPreviewVisible(false);
+
     try {
       await analyze(text);
       router.push("/results");
@@ -69,9 +96,9 @@ export default function AnalyzeScreen() {
             <View style={styles.buttonContainer}>
               <Button
                 title="Analyze"
-                onPress={handleAnalyze}
-                loading={isAnalyzing}
-                disabled={!text.trim() || isAnalyzing}
+                onPress={handleGetPreview}
+                loading={isAnalyzing || isLoadingPreview}
+                disabled={!text.trim() || isAnalyzing || isLoadingPreview}
               />
             </View>
             <View style={styles.tipsContainer}>
@@ -91,6 +118,14 @@ export default function AnalyzeScreen() {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        <PreviewModal
+          visible={isPreviewVisible}
+          onClose={() => setIsPreviewVisible(false)}
+          onConfirm={handleAnalyze}
+          previewText={previewText}
+          isLoading={isLoadingPreview}
+        />
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );

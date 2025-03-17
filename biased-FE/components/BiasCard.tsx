@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
-import { colors } from "@/constants/colors";
+import { colors } from "@/constants/Colors";
 import { BiasType } from "@/constants/biases";
 
 interface BiasCardProps {

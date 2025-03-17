@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { ChevronRight } from "lucide-react-native";
-import { colors } from "@/constants/colors";
+import { colors } from "@/constants/Colors";
 import { AnalysisResult } from "@/types/analysis";
 import { biasTypes } from "@/constants/biases";
 

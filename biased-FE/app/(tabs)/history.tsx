@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -6,17 +6,32 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Trash2 } from "lucide-react-native";
-import { colors } from "@/constants/colors";
+import { Trash2, RefreshCw } from "lucide-react-native";
+import { colors } from "@/constants/Colors";
 import { useAnalysisStore } from "@/store/analysisStore";
 import { AnalysisHistoryItem } from "@/components/AnalysisHistoryItem";
 import { AnalysisResult } from "@/types/analysis";
 
 export default function HistoryScreen() {
-  const { history, setCurrentAnalysis, clearHistory } = useAnalysisStore();
+  const {
+    history,
+    setCurrentAnalysis,
+    clearHistory,
+    fetchHistory,
+    isLoadingHistory,
+  } = useAnalysisStore();
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const handleRefresh = () => {
+    fetchHistory();
+  };
 
   const handleItemPress = (analysis: AnalysisResult) => {
     setCurrentAnalysis(analysis);
@@ -45,16 +60,31 @@ export default function HistoryScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Analysis History</Text>
-        {history.length > 0 && (
+        <View style={styles.headerButtons}>
           <TouchableOpacity
-            onPress={confirmClearHistory}
-            style={styles.clearButton}
+            onPress={handleRefresh}
+            style={styles.refreshButton}
+            disabled={isLoadingHistory}
           >
-            <Trash2 size={20} color={colors.error} />
+            <RefreshCw size={20} color={colors.primary} />
           </TouchableOpacity>
-        )}
+          {history.length > 0 && (
+            <TouchableOpacity
+              onPress={confirmClearHistory}
+              style={styles.clearButton}
+            >
+              <Trash2 size={20} color={colors.error} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-      {history.length === 0 ? (
+
+      {isLoadingHistory ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading history...</Text>
+        </View>
+      ) : history.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No analysis history yet</Text>
           <Text style={styles.emptySubtext}>
@@ -103,6 +133,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
   },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  refreshButton: {
+    padding: 8,
+    marginRight: 8,
+  },
   clearButton: {
     padding: 8,
   },
@@ -137,5 +175,15 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "600",
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: colors.text,
   },
 });

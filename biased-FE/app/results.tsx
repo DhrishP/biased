@@ -6,17 +6,19 @@ import {
   ScrollView,
   TouchableOpacity,
   Share,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { ArrowLeft, Share2 } from "lucide-react-native";
-import { colors } from "@/constants/colors";
+import { colors } from "@/constants/Colors";
 import { useAnalysisStore } from "@/store/analysisStore";
 import { PieChart } from "@/components/PieChart";
 import { BiasCard } from "@/components/BiasCard";
 import { biasTypes } from "@/constants/biases";
 import { Button } from "@/components/Button";
 import { BiasResult } from "@/types/analysis";
+import Markdown from "react-native-markdown-display";
 
 export default function ResultsScreen() {
   const { currentAnalysis } = useAnalysisStore();
@@ -77,7 +79,9 @@ export default function ResultsScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.summaryContainer}>
             <Text style={styles.summaryTitle}>Summary</Text>
-            <Text style={styles.summaryText}>{currentAnalysis.summary}</Text>
+            <Markdown style={markdownStyles}>
+              {currentAnalysis.summary}
+            </Markdown>
           </View>
           <View style={styles.chartSection}>
             <Text style={styles.sectionTitle}>Bias Breakdown</Text>
@@ -141,11 +145,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 8,
   },
-  summaryText: {
-    fontSize: 16,
-    color: colors.text,
-    lineHeight: 22,
-  },
   chartSection: {
     marginBottom: 20,
   },
@@ -181,3 +180,54 @@ const styles = StyleSheet.create({
     width: 200,
   },
 });
+
+const markdownStyles = {
+  body: {
+    color: colors.text,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  heading1: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: "700" as const,
+    marginVertical: 12,
+  },
+  heading2: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: "600" as const,
+    marginVertical: 10,
+  },
+  heading3: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "600" as const,
+    marginVertical: 8,
+  },
+  paragraph: {
+    marginVertical: 8,
+  },
+  list: {
+    marginVertical: 8,
+  },
+  listItem: {
+    marginVertical: 4,
+  },
+  strong: {
+    fontWeight: "700" as const,
+  },
+  em: {
+    fontStyle: "italic" as const,
+  },
+  code: {
+    backgroundColor: colors.border,
+    padding: 4,
+    borderRadius: 4,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+  },
+  link: {
+    color: colors.primary,
+    textDecorationLine: "underline" as const,
+  },
+};
