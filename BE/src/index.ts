@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { generateText, generateObject } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
@@ -9,6 +10,43 @@ type Bindings = {
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
+
+// Add CORS middleware
+app.use(
+  "*",
+  cors({
+    origin: "*", // In production, you should restrict this to your frontend domain
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    exposeHeaders: ["Content-Length"],
+    maxAge: 600,
+    credentials: true,
+  })
+);
+
+const validBiasIds = [
+  "confirmation",
+  "anchoring",
+  "availability",
+  "survivorship",
+  "bandwagon",
+  "dunning_kruger",
+  "negativity",
+  "sunk_cost",
+] as const;
+
+const biasSchema = z.object({
+  biases: z.array(
+    z.object({
+      id: z.enum(validBiasIds),
+      percentage: z
+        .number()
+        .min(0)
+        .max(100)
+        .describe("Confidence percentage of bias presence (0-100)"),
+    })
+  ),
+});
 
 app.get("/", (c) => {
   return c.text("Bias Analysis API");
@@ -33,8 +71,11 @@ app.post("/preview", async (c) => {
       Suggest specific elements that could be added to provide more context.`,
       messages: [{ role: "user", content: text }],
     });
+    const res = (await result).text
 
-    return c.json(result);
+    console.log("res",res)
+
+    return c.json({ text: res });
   } catch (error) {
     console.error("Preview error:", error);
     return c.json({ error: "Failed to process preview request" }, 500);
@@ -53,33 +94,32 @@ app.post("/analyse", async (c) => {
       apiKey: c.env.GOOGLE_API_KEY,
     });
 
-    const biasSchema = z.object({
-      biases: z.array(
-        z.object({
-          name: z.string().describe("The name of the cognitive bias"),
-          percentage: z
-            .number()
-            .min(0)
-            .max(100)
-            .describe("Confidence percentage of bias presence (0-100)"),
-        })
-      ),
-    });
-
     const { object: biasAnalysisResult } = await generateObject({
       model: google("gemini-2.0-flash"),
       schema: biasSchema,
       system: `You are an expert in cognitive biases and psychology. 
       Analyze the given scenario and identify cognitive biases present.
-      For each bias, provide a name, a percentage indicating how strongly the bias is present (0-100%),
-      and a brief description of how it manifests in the scenario.
+      For each bias, provide a percentage indicating how strongly the bias is present (0-100%).
+      Only use the following bias IDs: ${validBiasIds.join(", ")}.
+      Ensure the percentages sum to 100%.
       Common biases include: anchoring bias, confirmation bias, availability heuristic, 
       dunning-kruger effect, hindsight bias, etc. Only include biases that are actually present.`,
       prompt: text,
     });
+
     if (!biasSchema.parse(biasAnalysisResult)) {
-      return c.json({ error: "No biases found" }, 400);
+      return c.json({ error: "Invalid bias analysis result" }, 400);
     }
+
+    // Validate that percentages sum to 100%
+    const totalPercentage = biasAnalysisResult.biases.reduce(
+      (sum, bias) => sum + bias.percentage,
+      0
+    );
+    if (Math.abs(totalPercentage - 100) > 0.01) {
+      return c.json({ error: "Bias percentages must sum to 100%" }, 400);
+    }
+
     const { text: summary } = await generateText({
       model: google("gemini-2.0-flash"),
       system: `You are an expert in cognitive biases and psychology.
@@ -91,27 +131,27 @@ app.post("/analyse", async (c) => {
     });
 
     // Create a record for the database
-    const biasAnalysis: BiasAnalysis = {
+    const biasAnalysis = {
       id: crypto.randomUUID(),
-      scenario: text,
-      biases: biasAnalysisResult.biases,
-      summary: summary,
-      createdAt: new Date().toISOString(),
+      text,
+      results: biasAnalysisResult.biases,
+      summary,
+      timestamp: Date.now(),
     };
 
     // Store in D1 database
     const db = c.env.DB;
     await db
       .prepare(
-        `INSERT INTO bias_analyses (id, scenario, biases, summary, created_at) 
+        `INSERT INTO bias_analyses (id, text, results, summary, timestamp) 
        VALUES (?, ?, ?, ?, ?)`
       )
       .bind(
         biasAnalysis.id,
-        biasAnalysis.scenario,
-        JSON.stringify(biasAnalysis.biases),
+        biasAnalysis.text,
+        JSON.stringify(biasAnalysis.results),
         biasAnalysis.summary,
-        biasAnalysis.createdAt
+        biasAnalysis.timestamp
       )
       .run();
 
@@ -127,15 +167,15 @@ app.get("/history", async (c) => {
     const db = c.env.DB;
     const { results } = await db
       .prepare(
-        `SELECT id, scenario, biases, summary, created_at as createdAt 
+        `SELECT id, text, results, summary, timestamp 
        FROM bias_analyses 
-       ORDER BY created_at DESC`
+       ORDER BY timestamp DESC`
       )
       .all();
 
     const formattedResults = results.map((result: any) => ({
       ...result,
-      biases: JSON.parse(result.biases),
+      results: JSON.parse(result.results),
     }));
 
     return c.json(formattedResults);
@@ -144,16 +184,5 @@ app.get("/history", async (c) => {
     return c.json({ error: "Failed to retrieve history" }, 500);
   }
 });
-
-type BiasAnalysis = {
-  id: string;
-  scenario: string;
-  biases: {
-    name: string;
-    percentage: number;
-  }[];
-  summary: string;
-  createdAt: string;
-};
 
 export default app;

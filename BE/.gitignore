@@ -1,5 +1,7 @@
 # prod
 dist/
+.dev.vars
+.dev
 
 # dev
 .yarn/

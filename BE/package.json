@@ -7,10 +7,11 @@
     "@ai-sdk/google": "^1.1.25",
     "ai": "^4.1.61",
     "hono": "^3.11.7",
+    "react-native-svg": "^15.11.2",
+    "wrangler": "4",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20231218.0",
-    "wrangler": "^3.22.1"
+    "@cloudflare/workers-types": "^4.20231218.0"
   }
 }
