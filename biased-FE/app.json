@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "biased-FE",
+    "name": "Biased",
     "slug": "biased-FE",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +15,10 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.yourdomain.biased",
+      "versionCode": 1,
+      "permissions": []
     },
     "web": {
       "bundler": "metro",
