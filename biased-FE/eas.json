@@ -3,24 +3,21 @@
     "version": ">= 5.9.1"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
     "preview": {
-      "distribution": "internal"
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "debug-production": {
+      "android": {
+        "buildType": "apk",
+        "developmentClient": true,
+        "distribution": "internal"
+      }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "serviceAccountKeyPath": "./google-service-account-key.json",
-        "track": "production"
       }
     }
   }

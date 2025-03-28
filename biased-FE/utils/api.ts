@@ -2,9 +2,21 @@ import { AnalysisResult, BiasResult } from "@/types/analysis";
 import Constants from "expo-constants";
 
 // Get API URL from environment variables or use a default
-const API_URL =
-  Constants.expoConfig?.extra?.apiUrl ||
-  "https://biased-be.yourdomain.workers.dev";
+const API_URL = (() => {
+  try {
+    return (
+      Constants.expoConfig?.extra?.apiUrl ||
+      "https://biased-be.parekhdhrish-pg.workers.dev"
+    );
+  } catch (error) {
+    console.error("Error loading API URL from config:", error);
+    // Fallback to production URL
+    return "https://biased-be.parekhdhrish-pg.workers.dev";
+  }
+})();
+
+// Log the API URL being used (this will help with debugging)
+console.log("Using API URL:", API_URL);
 
 // Interface for the backend response
 interface BiasAnalysisResponse {
@@ -23,6 +35,12 @@ interface PreviewResponse {
 // Analyze text
 export const analyzeText = async (text: string): Promise<AnalysisResult> => {
   try {
+    console.log("Attempting to analyze text with API:", API_URL);
+
+    if (!text || typeof text !== "string") {
+      throw new Error("Invalid text input");
+    }
+
     const response = await fetch(`${API_URL}/analyse`, {
       method: "POST",
       headers: {
@@ -32,17 +50,33 @@ export const analyzeText = async (text: string): Promise<AnalysisResult> => {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(
-        error.error || `Analysis request failed with status ${response.status}`
-      );
+      let errorMessage = `Analysis request failed with status ${response.status}`;
+      try {
+        const error = await response.json();
+        errorMessage = error.error || errorMessage;
+      } catch (e) {
+        // If parsing error response fails, use the default message
+      }
+      console.error("API Error:", errorMessage);
+      throw new Error(errorMessage);
     }
 
     const data: BiasAnalysisResponse = await response.json();
+
+    // Validate response data
+    if (!data || !data.id || !Array.isArray(data.results)) {
+      throw new Error("Invalid response format from server");
+    }
+
     return data;
   } catch (error) {
     console.error("Error analyzing text:", error);
-    throw error;
+    // Rethrow with a user-friendly message
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "An unexpected error occurred while analyzing text"
+    );
   }
 };
 
