@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,77 +6,192 @@ import {
   Modal,
   TouchableOpacity,
   ActivityIndicator,
+  TextInput,
   ScrollView,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/Colors";
 import { Button } from "./Button";
-import Markdown from "react-native-markdown-display";
+import { GeneratedQuestion, generateQuestions } from "@/utils/api";
 
-interface PreviewModalProps {
+interface DynamicScanModalProps {
   visible: boolean;
   onClose: () => void;
-  onConfirm: () => void;
-  previewText: string;
+  onConfirm: (fullText: string) => void;
   isLoading: boolean;
 }
 
-export const PreviewModal: React.FC<PreviewModalProps> = ({
+export const QuickScanModal: React.FC<DynamicScanModalProps> = ({
   visible,
   onClose,
   onConfirm,
-  previewText,
   isLoading,
 }) => {
+  const [step, setStep] = useState(0);
+  const [thought, setThought] = useState("");
+  const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [extraDetails, setExtraDetails] = useState("");
+
+  const resetState = () => {
+    setStep(0);
+    setThought("");
+    setQuestions([]);
+    setAnswers({});
+    setIsGeneratingQuestions(false);
+    setExtraDetails("");
+  };
+
+  const handleClose = () => {
+    resetState();
+    onClose();
+  };
+
+  const handleGenerateQuestions = async () => {
+    if (!thought) return;
+    setIsGeneratingQuestions(true);
+    try {
+      const generated = await generateQuestions(thought);
+      setQuestions(generated);
+      setStep(1);
+    } catch (error) {
+      console.error("Failed to generate questions", error);
+      // Handle error, maybe show a message to the user
+    } finally {
+      setIsGeneratingQuestions(false);
+    }
+  };
+
+  const handleAnswerSelect = (questionIndex: number, option: string) => {
+    setAnswers((prev) => ({ ...prev, [questionIndex]: option }));
+  };
+
+  const handleNextQuestion = () => {
+    if (step < questions.length) {
+      setStep(step + 1);
+    } else {
+      setStep(step + 1); // Move to final details step
+    }
+  };
+
+  const handleConfirm = () => {
+    let fullText = `Initial Thought: ${thought}\n\n`;
+    questions.forEach((q, index) => {
+      fullText += `Q: ${q.question}\nA: ${answers[index] || "Not answered"}\n\n`;
+    });
+    if (extraDetails) {
+      fullText += `Additional Details: ${extraDetails}\n`;
+    }
+    onConfirm(fullText);
+  };
+
+  const renderContent = () => {
+    if (isGeneratingQuestions) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Generating questions...</Text>
+        </View>
+      );
+    }
+
+    // Step 0: Initial thought input
+    if (step === 0) {
+      return (
+        <View>
+          <Text style={styles.subtitle}>
+            What thought or doubt is on your mind?
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={thought}
+            onChangeText={setThought}
+            placeholder="Enter your thought here..."
+            multiline
+          />
+          <Button
+            title="Next"
+            onPress={handleGenerateQuestions}
+            disabled={!thought}
+          />
+        </View>
+      );
+    }
+
+    // Step 1 to questions.length: Dynamic questions
+    if (step > 0 && step <= questions.length) {
+      const questionIndex = step - 1;
+      const currentQuestion = questions[questionIndex];
+      return (
+        <View>
+          <Text style={styles.subtitle}>{currentQuestion.question}</Text>
+          <View style={styles.tagContainer}>
+            {currentQuestion.options.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.tag,
+                  answers[questionIndex] === option && styles.tagSelected,
+                ]}
+                onPress={() => handleAnswerSelect(questionIndex, option)}
+              >
+                <Text
+                  style={[
+                    styles.tagText,
+                    answers[questionIndex] === option && styles.tagTextSelected,
+                  ]}
+                >
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Button
+            title="Next"
+            onPress={handleNextQuestion}
+            disabled={!answers[questionIndex]}
+          />
+        </View>
+      );
+    }
+
+    // Final Step: Optional extra details
+    if (step > questions.length) {
+      return (
+        <View>
+          <Text style={styles.subtitle}>Add any other details? (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={extraDetails}
+            onChangeText={setExtraDetails}
+            placeholder="Enter any extra details here..."
+            multiline
+          />
+          <Button title="Finish Analysis" onPress={handleConfirm} loading={isLoading} />
+        </View>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>Preview</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Text style={styles.title}>Dynamic Scan</Text>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
-
-          <View style={styles.content}>
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.loadingText}>Generating preview...</Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.subtitle}>
-                  Here's a preview of your analysis. Would you like to proceed?
-                </Text>
-                <ScrollView style={styles.previewContainer}>
-                  <Markdown style={markdownStyles}>
-                    {previewText || "No preview available"}
-                  </Markdown>
-                </ScrollView>
-                <View style={styles.buttonContainer}>
-                  <Button
-                    title="Cancel"
-                    onPress={onClose}
-                    style={styles.cancelButton}
-                    textStyle={styles.cancelButtonText}
-                  />
-                  <Button
-                    title="Proceed with Analysis"
-                    onPress={onConfirm}
-                    style={styles.confirmButton}
-                  />
-                </View>
-              </>
-            )}
-          </View>
+          <ScrollView style={styles.content}>{renderContent()}</ScrollView>
         </View>
       </View>
     </Modal>
@@ -123,32 +238,40 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 16,
   },
-  previewContainer: {
+  input: {
     backgroundColor: colors.card,
     borderRadius: 8,
     padding: 16,
-    maxHeight: 300,
+    minHeight: 100,
+    textAlignVertical: "top",
     marginBottom: 20,
+    color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  buttonContainer: {
+  tagContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    flexWrap: "wrap",
+    marginBottom: 20,
   },
-  cancelButton: {
-    flex: 1,
-    marginRight: 8,
-    backgroundColor: "transparent",
+  tag: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    margin: 4,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  cancelButtonText: {
+  tagSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  tagText: {
     color: colors.text,
   },
-  confirmButton: {
-    flex: 2,
-    marginLeft: 8,
+  tagTextSelected: {
+    color: "#FFFFFF",
   },
   loadingContainer: {
     alignItems: "center",
@@ -161,54 +284,3 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 });
-
-const markdownStyles = {
-  body: {
-    color: colors.text,
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  heading1: {
-    color: colors.text,
-    fontSize: 24,
-    fontWeight: "700" as const,
-    marginVertical: 12,
-  },
-  heading2: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: "600" as const,
-    marginVertical: 10,
-  },
-  heading3: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "600" as const,
-    marginVertical: 8,
-  },
-  paragraph: {
-    marginVertical: 8,
-  },
-  list: {
-    marginVertical: 8,
-  },
-  listItem: {
-    marginVertical: 4,
-  },
-  strong: {
-    fontWeight: "700" as const,
-  },
-  em: {
-    fontStyle: "italic" as const,
-  },
-  code: {
-    backgroundColor: colors.border,
-    padding: 4,
-    borderRadius: 4,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-  },
-  link: {
-    color: colors.primary,
-    textDecorationLine: "underline" as const,
-  },
-};

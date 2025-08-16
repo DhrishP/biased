@@ -3,12 +3,9 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -16,42 +13,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/Colors";
 import { Button } from "@/components/Button";
 import { useAnalysisStore } from "@/store/analysisStore";
-import { PreviewModal } from "@/components/PreviewModal";
-import { getTextPreview } from "@/utils/api";
+import { QuickScanModal } from "@/components/PreviewModal";
 
 export default function AnalyzeScreen() {
-  const [text, setText] = useState("");
   const { analyze, isAnalyzing } = useAnalysisStore();
-  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-  const [previewText, setPreviewText] = useState("");
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
-  const handleGetPreview = async () => {
-    if (!text.trim()) return;
-
-    setIsLoadingPreview(true);
-    setIsPreviewVisible(true);
+  const handleAnalyze = async (fullText: string) => {
+    if (!fullText.trim()) return;
+    setIsModalVisible(false);
 
     try {
-      const preview = await getTextPreview(text);
-      if (!preview) {
-        throw new Error("No preview text received");
-      }
-      setPreviewText(preview);
-    } catch (error) {
-      console.error("Preview failed:", error);
-      setPreviewText("Failed to generate preview. Please try again.");
-    } finally {
-      setIsLoadingPreview(false);
-    }
-  };
-
-  const handleAnalyze = async () => {
-    if (!text.trim()) return;
-    setIsPreviewVisible(false);
-
-    try {
-      await analyze(text);
+      await analyze(fullText);
       router.push("/results");
     } catch (error) {
       console.error("Analysis failed:", error);
@@ -59,75 +32,57 @@ export default function AnalyzeScreen() {
     }
   };
 
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
-  };
-
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
-      <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.keyboardAvoid}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.header}>
-              <Ionicons name="brain" size={40} color={colors.primary} />
-              <Text style={styles.title}>Cognitive Bias Detector</Text>
-              <Text style={styles.subtitle}>
-                Enter your thoughts, opinions, or arguments to analyze for
-                cognitive biases
-              </Text>
-            </View>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.textInput}
-                multiline
-                placeholder="Start typing here..."
-                placeholderTextColor={colors.textLight}
-                value={text}
-                onChangeText={setText}
-                textAlignVertical="top"
-              />
-            </View>
-            <View style={styles.buttonContainer}>
-              <Button
-                title="Analyze"
-                onPress={handleGetPreview}
-                loading={isAnalyzing || isLoadingPreview}
-                disabled={!text.trim() || isAnalyzing || isLoadingPreview}
-              />
-            </View>
-            <View style={styles.tipsContainer}>
-              <Text style={styles.tipsTitle}>Tips for better analysis:</Text>
-              <Text style={styles.tipText}>
-                • Write at least a paragraph for more accurate results
-              </Text>
-              <Text style={styles.tipText}>
-                • Express your genuine opinions and reasoning
-              </Text>
-              <Text style={styles.tipText}>
-                • Include your thought process and assumptions
-              </Text>
-              <Text style={styles.tipText}>
-                • Be specific rather than general
-              </Text>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          <View style={styles.header}>
+            <Ionicons name="bulb-outline" size={40} color={colors.primary} />
+            <Text style={styles.title}>Cognitive Bias Detector</Text>
+            <Text style={styles.subtitle}>
+              Uncover hidden biases in your thoughts and arguments.
+            </Text>
+          </View>
 
-        <PreviewModal
-          visible={isPreviewVisible}
-          onClose={() => setIsPreviewVisible(false)}
-          onConfirm={handleAnalyze}
-          previewText={previewText}
-          isLoading={isLoadingPreview}
-        />
-      </SafeAreaView>
-    </TouchableWithoutFeedback>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Start Analysis"
+              onPress={() => setIsModalVisible(true)}
+              loading={isAnalyzing}
+              disabled={isAnalyzing}
+            />
+          </View>
+          <View style={styles.tipsContainer}>
+            <Text style={styles.tipsTitle}>How it works:</Text>
+            <Text style={styles.tipText}>
+              • You'll be guided through a few quick questions.
+            </Text>
+            <Text style={styles.tipText}>
+              • Answer them to provide context about your thought.
+            </Text>
+            <Text style={styles.tipText}>
+              • Our AI will then analyze your input for cognitive biases.
+            </Text>
+            <Text style={styles.tipText}>
+              • The more context you give, the better the analysis!
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <QuickScanModal
+        visible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+        onConfirm={handleAnalyze}
+        isLoading={isAnalyzing}
+      />
+    </SafeAreaView>
   );
 }
 
@@ -142,10 +97,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: 20,
+    justifyContent: "center",
   },
   header: {
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 48,
   },
   title: {
     fontSize: 24,
@@ -159,19 +115,6 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     textAlign: "center",
     marginBottom: 8,
-  },
-  inputContainer: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 20,
-  },
-  textInput: {
-    minHeight: 150,
-    padding: 16,
-    fontSize: 16,
-    color: colors.text,
   },
   buttonContainer: {
     alignItems: "center",

@@ -27,9 +27,13 @@ interface BiasAnalysisResponse {
   timestamp: number;
 }
 
-// Interface for the preview response
-interface PreviewResponse {
-  text: string;
+export interface GeneratedQuestion {
+  question: string;
+  options: string[];
+}
+
+interface QuestionsResponse {
+  questions: GeneratedQuestion[];
 }
 
 // Analyze text
@@ -80,31 +84,34 @@ export const analyzeText = async (text: string): Promise<AnalysisResult> => {
   }
 };
 
-// Get text preview
-export const getTextPreview = async (text: string): Promise<string> => {
+// Generate questions
+export const generateQuestions = async (
+  text: string
+): Promise<GeneratedQuestion[]> => {
   try {
-    const response = await fetch(`${API_URL}/preview`, {
+    const response = await fetch(`${API_URL}/generate-questions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ text }),
     });
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(
-        error.error || `Preview request failed with status ${response.status}`
+        error.error ||
+          `Question generation request failed with status ${response.status}`
       );
     }
-    console.log("response", response.text);
 
-    const data: PreviewResponse = await response.json();
-    if (!data || typeof data.text !== "string") {
-      throw new Error("Invalid preview response format");
+    const data: QuestionsResponse = await response.json();
+    if (!data || !Array.isArray(data.questions)) {
+      throw new Error("Invalid questions response format");
     }
-    return data.text;
+    return data.questions;
   } catch (error) {
-    console.error("Error getting preview:", error);
+    console.error("Error generating questions:", error);
     throw error;
   }
 };
