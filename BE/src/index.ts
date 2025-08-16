@@ -33,6 +33,15 @@ const validBiasIds = [
   "dunning_kruger",
   "negativity",
   "sunk_cost",
+  "hindsight",
+  "actor_observer",
+  "optimism",
+  "pessimism",
+  "status_quo",
+  "framing_effect",
+  "halo_effect",
+  "false_consensus_effect",
+  "reactance",
 ] as const;
 
 const biasSchema = z.object({
@@ -82,6 +91,48 @@ app.post("/preview", async (c) => {
   }
 });
 
+const questionsSchema = z.object({
+  questions: z
+    .array(
+      z.object({
+        question: z.string().describe("A short, on-point question to ask the user to get more context about their thought."),
+        options: z.array(z.string()).describe("A list of 3-5 short, tappable options for the question."),
+      })
+    )
+    .min(6)
+    .max(10)
+    .describe("An array of 5 to 10 questions to ask the user."),
+});
+
+app.post("/generate-questions", async (c) => {
+	try {
+		const { text } = await c.req.json();
+		if (!text) {
+			return c.json({ error: "Text is required" }, 400);
+		}
+
+		const google = createGoogleGenerativeAI({
+			apiKey: c.env.GOOGLE_API_KEY,
+		});
+
+		const { object: generatedQuestions } = await generateObject({
+			model: google("gemini-2.0-flash"),
+			schema: questionsSchema,
+			system: `You are an expert in cognitive biases and psychology. A user has provided their initial thought or doubt. 
+      Your task is to generate a series of clarifying questions to gather more context for a cognitive bias analysis.
+      The questions should be simple, direct, and easy to answer on a mobile device.
+      For each question, provide a short list of tappable, multiple-choice options.
+      The goal is to understand the user's emotional state, the situation, and their underlying assumptions.`,
+			prompt: `Generate questions for the following thought: "${text}"`,
+		});
+
+		return c.json(generatedQuestions);
+	} catch (error) {
+		console.error("Question generation error:", error);
+		return c.json({ error: "Failed to generate questions" }, 500);
+	}
+});
+
 app.post("/analyse", async (c) => {
   try {
     const { text } = await c.req.json();
@@ -97,27 +148,36 @@ app.post("/analyse", async (c) => {
     const { object: biasAnalysisResult } = await generateObject({
       model: google("gemini-2.0-flash"),
       schema: biasSchema,
-      system: `You are an expert in cognitive biases and psychology. 
-      Analyze the given scenario and identify cognitive biases present.
-      For each bias, provide a percentage indicating how strongly the bias is present (0-100%).
-      Only use the following bias IDs: ${validBiasIds.join(", ")}.
-      Ensure the percentages sum to 100%.
-      Common biases include: anchoring bias, confirmation bias, availability heuristic, 
-      dunning-kruger effect, hindsight bias, etc. Only include biases that are actually present.`,
+      system: `You are an expert in cognitive biases and psychology. Analyze the user's input, which includes an initial thought, answers to clarifying questions, and optional additional details.
+      Your task is to identify which cognitive biases are present in the user's reasoning.
+
+      For each bias you identify, provide a confidence score from 0-100 indicating how strongly the bias is present. The scores for different biases are independent and should NOT sum to 100.
+      Only include biases that are clearly present in the text. If no biases are detected, return an empty array.
+
+      Use only the following bias IDs and their definitions:
+      - confirmation: The tendency to search for, interpret, favor, and recall information in a way that confirms or supports one's preexisting beliefs.
+      - anchoring: Relying too heavily on the first piece of information offered when making decisions.
+      - availability: Overestimating the likelihood of events that are more easily recalled in memory, often because of their recency or emotional impact.
+      - survivorship: Focusing on the people or things that "survived" some process and inadvertently overlooking those that did not because of their lack of visibility.
+      - bandwagon: The tendency to do or believe things because many other people do or believe the same.
+      - dunning_kruger: The tendency for unskilled individuals to overestimate their own ability and for experts to underestimate their own ability.
+      - negativity: The tendency to give more weight to negative experiences or information than positive ones.
+      - sunk_cost: Continuing an action or endeavor as a result of previously invested resources (time, money, or effort), even if it's no longer the most rational choice.
+      - hindsight: The tendency to see past events as being more predictable than they actually were.
+      - actor_observer: The tendency to attribute one's own actions to external causes while attributing other people's behaviors to internal causes.
+      - optimism: The tendency to be overly optimistic, overestimating favorable and pleasing outcomes.
+      - pessimism: The tendency to overestimate the likelihood of negative outcomes.
+      - status_quo: The tendency to prefer that things stay the same, seeing any change as a loss.
+      - framing_effect: Drawing different conclusions from the same information, depending on how that information is presented.
+      - halo_effect: The tendency for a positive impression of a person, company, brand, or product in one area to positively influence one's opinion or feelings in other areas.
+      - false_consensus_effect: The tendency to overestimate the extent to which one's own opinions, beliefs, preferences, values, and habits are normal and typical of those of others.
+      - reactance: The tendency to do the opposite of what you are being told to do, in order to assert your sense of freedom.
+      `,
       prompt: text,
     });
 
     if (!biasSchema.parse(biasAnalysisResult)) {
       return c.json({ error: "Invalid bias analysis result" }, 400);
-    }
-
-    // Validate that percentages sum to 100%
-    const totalPercentage = biasAnalysisResult.biases.reduce(
-      (sum, bias) => sum + bias.percentage,
-      0
-    );
-    if (Math.abs(totalPercentage - 100) > 0.01) {
-      return c.json({ error: "Bias percentages must sum to 100%" }, 400);
     }
 
     const { text: summary } = await generateText({
