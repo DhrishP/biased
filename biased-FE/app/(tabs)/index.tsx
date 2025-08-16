@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Brain } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/Colors";
 import { Button } from "@/components/Button";
 import { useAnalysisStore } from "@/store/analysisStore";
@@ -75,7 +75,7 @@ export default function AnalyzeScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.header}>
-              <Brain size={40} color={colors.primary} />
+              <Ionicons name="brain" size={40} color={colors.primary} />
               <Text style={styles.title}>Cognitive Bias Detector</Text>
               <Text style={styles.subtitle}>
                 Enter your thoughts, opinions, or arguments to analyze for

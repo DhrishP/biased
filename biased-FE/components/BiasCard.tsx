@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { ChevronDown, ChevronUp } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/Colors";
 import { BiasType } from "@/constants/biases";
 
@@ -10,7 +10,7 @@ interface BiasCardProps {
 }
 
 export const BiasCard: React.FC<BiasCardProps> = ({ bias, percentage }) => {
-  const [expanded, setExpanded] = React.useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const toggleExpanded = () => {
     setExpanded(!expanded);
@@ -28,9 +28,9 @@ export const BiasCard: React.FC<BiasCardProps> = ({ bias, percentage }) => {
           <Text style={styles.percentage}>{percentage}%</Text>
         </View>
         {expanded ? (
-          <ChevronUp size={20} color={colors.textLight} />
+          <Ionicons name="chevron-up" size={20} color={colors.textLight} />
         ) : (
-          <ChevronDown size={20} color={colors.textLight} />
+          <Ionicons name="chevron-down" size={20} color={colors.textLight} />
         )}
       </TouchableOpacity>
 

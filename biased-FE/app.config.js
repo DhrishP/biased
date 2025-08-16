@@ -31,7 +31,7 @@ module.exports = {
   extra: {
     apiUrl: "https://biased-be.parekhdhrish-pg.workers.dev",
     eas: {
-      projectId: "f147e255-26a7-46ce-b164-7e1340b0d6c9",
+      projectId: "3b64067e-97e9-40b0-b16b-eb058af64cb8",
     },
   },
   plugins: [

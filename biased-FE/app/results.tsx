@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
-import { ArrowLeft, Share2 } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/Colors";
 import { useAnalysisStore } from "@/store/analysisStore";
 import { PieChart } from "@/components/PieChart";
@@ -65,12 +65,12 @@ export default function ResultsScreen() {
               onPress={() => router.back()}
               style={styles.headerButton}
             >
-              <ArrowLeft size={24} color={colors.text} />
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
           ),
           headerRight: () => (
             <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
-              <Share2 size={24} color={colors.text} />
+              <Ionicons name="share-outline" size={24} color={colors.text} />
             </TouchableOpacity>
           ),
         }}

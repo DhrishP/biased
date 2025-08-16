@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { ChevronRight } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/Colors";
 import { AnalysisResult } from "@/types/analysis";
 import { biasTypes } from "@/constants/biases";
@@ -50,7 +50,7 @@ export const AnalysisHistoryItem: React.FC<AnalysisHistoryItemProps> = ({
           </View>
         )}
       </View>
-      <ChevronRight size={20} color={colors.textLight} />
+      <Ionicons name="chevron-forward" size={20} color={colors.textLight} />
     </TouchableOpacity>
   );
 };

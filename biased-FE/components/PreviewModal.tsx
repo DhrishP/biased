@@ -9,7 +9,7 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
-import { X } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/Colors";
 import { Button } from "./Button";
 import Markdown from "react-native-markdown-display";
@@ -41,7 +41,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           <View style={styles.header}>
             <Text style={styles.title}>Preview</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color={colors.text} />
+              <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 

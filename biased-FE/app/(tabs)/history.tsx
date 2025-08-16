@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Trash2, RefreshCw } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/Colors";
 import { useAnalysisStore } from "@/store/analysisStore";
 import { AnalysisHistoryItem } from "@/components/AnalysisHistoryItem";
@@ -66,14 +66,14 @@ export default function HistoryScreen() {
             style={styles.refreshButton}
             disabled={isLoadingHistory}
           >
-            <RefreshCw size={20} color={colors.primary} />
+            <Ionicons name="refresh" size={20} color={colors.primary} />
           </TouchableOpacity>
           {history.length > 0 && (
             <TouchableOpacity
               onPress={confirmClearHistory}
               style={styles.clearButton}
             >
-              <Trash2 size={20} color={colors.error} />
+              <Ionicons name="trash" size={20} color={colors.error} />
             </TouchableOpacity>
           )}
         </View>

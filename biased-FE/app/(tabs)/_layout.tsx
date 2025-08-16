@@ -1,7 +1,7 @@
 import React from "react";
 import { Tabs } from "expo-router";
 import { colors } from "@/constants/Colors";
-import { Home, BarChart2, Info } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function TabLayout() {
   return (
@@ -26,7 +26,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Analyze",
-          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -34,7 +34,7 @@ export default function TabLayout() {
         options={{
           title: "History",
           tabBarIcon: ({ color, size }) => (
-            <BarChart2 size={size} color={color} />
+            <Ionicons name="bar-chart" size={size} color={color} />
           ),
         }}
       />
@@ -42,7 +42,7 @@ export default function TabLayout() {
         name="about"
         options={{
           title: "About",
-          tabBarIcon: ({ color, size }) => <Info size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="info" size={size} color={color} />,
         }}
       />
     </Tabs>

@@ -8,7 +8,7 @@ import {
   Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Brain, ExternalLink } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/Colors";
 
 export default function AboutScreen() {
@@ -20,7 +20,7 @@ export default function AboutScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Brain size={50} color={colors.primary} />
+          <Ionicons name="brain" size={50} color={colors.primary} />
           <Text style={styles.title}>Cognitive Bias Detector</Text>
           <Text style={styles.version}>Version 1.0.0</Text>
         </View>
@@ -66,21 +66,21 @@ export default function AboutScreen() {
             <Text style={styles.linkText}>
               Wikipedia: List of Cognitive Biases
             </Text>
-            <ExternalLink size={16} color={colors.primary} />
+            <Ionicons name="open-outline" size={16} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.linkButton}
             onPress={() => openLink("https://yourlogicalfallacyis.com/")}
           >
             <Text style={styles.linkText}>Your Logical Fallacy Is</Text>
-            <ExternalLink size={16} color={colors.primary} />
+            <Ionicons name="open-outline" size={16} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.linkButton}
             onPress={() => openLink("https://yourbias.is/")}
           >
             <Text style={styles.linkText}>Your Bias Is</Text>
-            <ExternalLink size={16} color={colors.primary} />
+            <Ionicons name="open-outline" size={16} color={colors.primary} />
           </TouchableOpacity>
         </View>
         <View style={styles.footer}>
