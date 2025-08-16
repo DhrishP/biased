@@ -36,6 +36,10 @@ interface QuestionsResponse {
   questions: GeneratedQuestion[];
 }
 
+interface TranscriptionResponse {
+  text: string;
+}
+
 // Analyze text
 export const analyzeText = async (text: string): Promise<AnalysisResult> => {
   try {
@@ -112,6 +116,39 @@ export const generateQuestions = async (
     return data.questions;
   } catch (error) {
     console.error("Error generating questions:", error);
+    throw error;
+  }
+};
+
+// Transcribe audio
+export const transcribeAudio = async (audioUri: string): Promise<string> => {
+  try {
+    const response = await fetch(audioUri);
+    const audioBlob = await response.blob();
+
+    const transcriptionResponse = await fetch(`${API_URL}/transcribe`, {
+      method: "POST",
+      headers: {
+        "Content-Type": audioBlob.type,
+      },
+      body: audioBlob,
+    });
+
+    if (!transcriptionResponse.ok) {
+      const error = await transcriptionResponse.json();
+      throw new Error(
+        error.error ||
+          `Transcription request failed with status ${transcriptionResponse.status}`
+      );
+    }
+
+    const data: TranscriptionResponse = await transcriptionResponse.json();
+    if (!data || typeof data.text !== "string") {
+      throw new Error("Invalid transcription response format");
+    }
+    return data.text;
+  } catch (error) {
+    console.error("Error transcribing audio:", error);
     throw error;
   }
 };

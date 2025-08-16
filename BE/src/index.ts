@@ -133,6 +133,37 @@ app.post("/generate-questions", async (c) => {
 	}
 });
 
+app.post("/transcribe", async (c) => {
+  try {
+    const audioBlob = await c.req.blob();
+    if (!audioBlob) {
+      return c.json({ error: "Audio data is required" }, 400);
+    }
+
+    const google = createGoogleGenerativeAI({
+      apiKey: c.env.GOOGLE_API_KEY,
+    });
+
+    const { text: transcribedText } = await generateText({
+      model: google("gemini-1.5-flash-latest"),
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Transcribe this audio." },
+            { type: "image", image: audioBlob }, // Using 'image' type for blob data as per Vercel AI SDK docs for multimodal input
+          ],
+        },
+      ],
+    });
+
+    return c.json({ text: transcribedText });
+  } catch (error) {
+    console.error("Transcription error:", error);
+    return c.json({ error: "Failed to transcribe audio" }, 500);
+  }
+});
+
 app.post("/analyse", async (c) => {
   try {
     const { text } = await c.req.json();

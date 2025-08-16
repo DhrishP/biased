@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/Colors";
 import { Button } from "./Button";
-import { GeneratedQuestion, generateQuestions } from "@/utils/api";
+import { GeneratedQuestion, generateQuestions, transcribeAudio } from "@/utils/api";
+import { Audio } from "expo-av";
 
 interface DynamicScanModalProps {
   visible: boolean;
@@ -20,6 +21,31 @@ interface DynamicScanModalProps {
   onConfirm: (fullText: string) => void;
   isLoading: boolean;
 }
+
+const VoiceInput = ({ 
+  onTranscription, 
+  isRecording, 
+  startRecording, 
+  stopRecording 
+}: { 
+  onTranscription: (text: string) => void; 
+  isRecording: boolean; 
+  startRecording: () => void; 
+  stopRecording: () => void; 
+}) => (
+  <View style={styles.voiceContainer}>
+    <Text style={styles.voiceText}>
+      {isRecording ? "Recording..." : "Press the mic to speak"}
+    </Text>
+    <TouchableOpacity
+      style={[styles.micButton, isRecording && styles.micButtonRecording]}
+      onPress={isRecording ? stopRecording : startRecording}
+    >
+      <Ionicons name="mic" size={32} color="white" />
+    </TouchableOpacity>
+    <Text style={styles.transcriptionLabel}>Your transcribed text will appear in the text box.</Text>
+  </View>
+);
 
 export const QuickScanModal: React.FC<DynamicScanModalProps> = ({
   visible,
@@ -33,6 +59,63 @@ export const QuickScanModal: React.FC<DynamicScanModalProps> = ({
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   const [extraDetails, setExtraDetails] = useState("");
+  
+  // Audio state
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [permissionResponse, requestPermission] = Audio.usePermissions();
+  const [isTranscribing, setIsTranscribing] = useState(false);
+
+  const activeTextSetter = step === 0 ? setThought : setExtraDetails;
+
+  useEffect(() => {
+    return () => {
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
+    };
+  }, [recording]);
+
+  const startRecording = async () => {
+    try {
+      if (permissionResponse && permissionResponse.status !== 'granted') {
+        await requestPermission();
+      }
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    setIsRecording(false);
+    if (!recording) return;
+
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI();
+    if (uri) {
+      setIsTranscribing(true);
+      try {
+        const transcribedText = await transcribeAudio(uri);
+        activeTextSetter(transcribedText);
+      } catch (error) {
+        console.error("Transcription failed", error);
+        // Handle error
+      } finally {
+        setIsTranscribing(false);
+      }
+    }
+    setRecording(null);
+  };
 
   const resetState = () => {
     setStep(0);
@@ -96,24 +179,31 @@ export const QuickScanModal: React.FC<DynamicScanModalProps> = ({
       );
     }
 
-    // Step 0: Initial thought input
+    // Step 0: Initial thought input (with voice)
     if (step === 0) {
       return (
         <View>
           <Text style={styles.subtitle}>
             What thought or doubt is on your mind?
           </Text>
+          <VoiceInput 
+            onTranscription={setThought}
+            isRecording={isRecording}
+            startRecording={startRecording}
+            stopRecording={stopRecording}
+          />
           <TextInput
             style={styles.input}
             value={thought}
             onChangeText={setThought}
-            placeholder="Enter your thought here..."
+            placeholder="Or type your thought here..."
             multiline
           />
           <Button
             title="Next"
             onPress={handleGenerateQuestions}
-            disabled={!thought}
+            disabled={!thought || isTranscribing}
+            loading={isTranscribing}
           />
         </View>
       );
@@ -156,19 +246,25 @@ export const QuickScanModal: React.FC<DynamicScanModalProps> = ({
       );
     }
 
-    // Final Step: Optional extra details
+    // Final Step: Optional extra details (with voice)
     if (step > questions.length) {
       return (
         <View>
           <Text style={styles.subtitle}>Add any other details? (Optional)</Text>
+          <VoiceInput 
+            onTranscription={setExtraDetails}
+            isRecording={isRecording}
+            startRecording={startRecording}
+            stopRecording={stopRecording}
+          />
           <TextInput
             style={styles.input}
             value={extraDetails}
             onChangeText={setExtraDetails}
-            placeholder="Enter any extra details here..."
+            placeholder="Or type extra details here..."
             multiline
           />
-          <Button title="Finish Analysis" onPress={handleConfirm} loading={isLoading} />
+          <Button title="Finish Analysis" onPress={handleConfirm} loading={isLoading || isTranscribing} disabled={isTranscribing} />
         </View>
       );
     }
@@ -282,5 +378,30 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: colors.text,
+  },
+  voiceContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  voiceText: {
+    color: colors.text,
+    marginBottom: 10,
+    fontSize: 16,
+  },
+  micButton: {
+    backgroundColor: colors.primary,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  micButtonRecording: {
+    backgroundColor: colors.error,
+  },
+  transcriptionLabel: {
+    color: colors.textLight,
+    marginTop: 10,
+    fontSize: 12,
   },
 });
